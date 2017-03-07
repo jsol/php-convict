@@ -1,0 +1,63 @@
+{
+  "about": "This is a demo program. One could use a really really long description here and hopefully it should be wrapped in a good way both in the config and in the command line help.",
+  "id": {
+    "doc": "The ID of this program. Just for demonstration purposes we require it to be an integer.",
+    "format": "nat",
+    "default": "7",
+    "env": "DEMO_ID"
+  },
+  "wait": {
+    "doc": "Perhaps use this for a sleep interval?",
+    "format": "duration",
+    "default": "12m",
+    "arg": "sleep",
+    "shortarg": "s"
+  },
+  "debug": {
+    "doc": "A boolean value can of course be true or false, but also yes and no, 1 or 0, or y and n.",
+    "format": "boolean",
+    "default": "no",
+    "env": "PHP_DEBUG"
+  },
+  "option": {
+    "doc": "You can specify an array of valid strings if you so choose..",
+    "format": ["a", "b", "c"],
+    "default": "a",
+    "shortarg": "m"
+  },
+  "max_size": {
+    "doc": "Maybe we need a max size?",
+    "format": "size",
+    "default": "70mb",
+    "arg": "max-size",
+    "env": "DEMO_SIZE"
+  },
+  "config": {
+    "doc": "The config file. Set through the command line using a --config argument or the env DEMO_CONFIG.",
+    "format": "path",
+    "default": "./config.json",
+    "arg": "config",
+    "env": "DEMO_CONFIG"
+  },
+  "backend": {
+    "host": {
+      "doc": "Lets say we have a backend, Group together some interesting options this way",
+      "format": "*",
+      "env": "PHP_BACKEND_HOST",
+      "default": "localhost",
+      "arg": "backend-ip"
+    },
+    "port": {
+      "doc": "Backend port, see IP doc.",
+      "format": "port",
+      "default": "80",
+      "arg": "backend-port"
+    },
+    "max_retries": {
+      "doc": "Maximum number of request retries.",
+      "format": "nat",
+      "default": 120,
+      "arg": "max-retries"
+    }
+  }
+}
