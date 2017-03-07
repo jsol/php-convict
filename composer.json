@@ -1,0 +1,28 @@
+{
+  "name": "jenson/convict",
+  "description": "Configuration management. PHP implementation of node-convict",
+  "type": "library",
+  "authors": [
+    {
+      "name": "Jens Olsson",
+      "email": "jens@rootsy.nu"
+    }
+  ],
+  "require": {
+  },
+  "autoload": {
+    "psr-4": {
+      "Convict\\": "src/",
+      "Convict\\Validator\\": "src/Validator/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Convict\\Test\\": "tests/"
+    }
+  },
+  "license": "MIT",
+  "require-dev": {
+    "phpunit/phpunit": "^5.6"
+  }
+}
