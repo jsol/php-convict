@@ -22,6 +22,11 @@ class BooleanTest extends \PHPUnit_Framework_TestCase {
       'validated' => true,
       'coerced' => true
     ];
+    $noString = [
+      'value' => 'no',
+      'validated' => true,
+      'coerced' => false
+    ];
 
     $invalidString = [
       'value' => 'yepp',
