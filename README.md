@@ -4,7 +4,9 @@ This is a php implementation of node-convict, with some additional features
 and some features yet to be implemented.
 
 ## Install
-Hopefully soon installable through composer.
+````bash
+composer require jenson/convict
+````
 
 ##TODO
 
@@ -14,7 +16,7 @@ The following needs to be done:
 
 * Unit tests
 * More formats
-* Loading several config files at the same time
+* ~~Loading several config files at the same time~~
 * More unit tests
 * Prettying up the code
 * More examples and documentation.
@@ -61,6 +63,111 @@ php demo.php --value val
 php demo.php -vval
 php demo.php --help
 ```
+
+##API
+
+### Constructor
+#### Parameters
+**filename | json-string Scheme** The scheme to load, either as a filename or as a JSON string.
+
+**Array Options** Defaults to an empty array. Valid options:
+
+*nohelp => true* Turn of the automatic command line help.
+
+####Throws
+Throws an \Exception if the scheme is invalid.
+
+### Convict->get
+####Parameters
+**string key** Defaults to empty. Use a dot notation to address configuration values.
+
+####Returns
+**null** If the key does not exist
+**mixed** If the key points to a leaf then that value is returned. If the key points to a part of the configuration tree then that sub-part is returned. An empty key returns the entire config tree.
+
+####Throws
+Should not throw an exception.
+
+### Convict->set
+
+####Parameters
+**string key** The key to set the value for. Use a dot notation to address configuration values. If the key doesnt exist then it will be created.
+**mixed value** The value to set
+
+####Returns
+Does not return anything
+
+####Throws
+Should not throw an exception.
+
+####Note
+The values set are not persisted in any way. Use Convict->writeFile to save them.
+
+Only the leafs can carry values, and if a new leaf is created then the value on the previous position will be discarded. Example:
+
+````PHP
+$config->set('a', 'x');
+$config->get('a'); // => string 'x'
+
+$config->set('a.b', 'y');
+$config->get('a'); // => array ('b' => 'y')
+
+$config->set('a.c', 'z');
+$config->get('a'); // => array ('b' => 'y', 'c' => 'z')
+
+````
+
+### Convict->addFormat
+Set a custom format for the validator to use. Just use the class name in the format field in the scheme. Case insensitive.
+
+### Parameters
+**Convict\Validator\Validator format** An instance of a class implementing the Validator interface.
+
+####Returns
+Does not return anything
+
+####Throws
+Should not throw an exception.
+
+####The Validator interface
+*validate ($key, $value)* Should throw a Validator\ValidationException for invalid values.
+*coerce ($value)* Should return a value that has been formated to fit the application.
+
+### Convict->validate
+
+#### Parameters
+No parameters
+
+#### Returns
+Does not return any value
+
+#### Throws
+Will throw either a Validator\ValidationException or an \Exception depending on the circumstances.
+
+#### Note
+For convenience sake this function will set the uncaught exception handler function to handle the events it throws out. After the validation it will restore the previous exception handler.
+
+### Convict->loadFile
+
+#### Parameters
+**Array | filename files** Will go through all the filenames in the array and load them in order. Also accepts a single file name.
+
+### Returns
+Does not return any value.
+
+### Throws
+Does not throw any exception.
+
+### Convict->loadConfigJson
+
+#### Parameters
+**Array | string jsons** Will go through all the JSON strings and load them to the config as if the were loaded from a file. Can also handle single JSON entries.
+
+#### Returns
+Does not return anything
+
+#### Throws
+Nope.
 
 ##The config file
 

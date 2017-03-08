@@ -1,0 +1,9 @@
+/**
+ * This is a comment
+ */
+
+{
+  // Also commenting on variables
+  "a": "other value",
+  "b": "untouched"
+}

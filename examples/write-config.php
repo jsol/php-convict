@@ -6,5 +6,5 @@ $c = new Convict\Convict($path . '/scheme.json');
 
 //$c->loadFile(dirname(__FILE__) . '/../test.json');
 $c->validate();
-$c->writeConfig($c->get('config'));
+$c->writeFile($c->get('config'));
 echo "Wrote config file to " . $c->get('config') . "\n";

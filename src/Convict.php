@@ -10,7 +10,17 @@ class Convict {
   private $env = [];
   private $validators = [];
 
-  public function __construct($scheme, $options = [])
+  /**
+   * Instansiate the Convict config class
+   *
+   * This class does all the parsing, printing, getting and setting.
+   *
+   * @param string $scheme  Either a JSON sceme of the config, or a file path pointing
+   *                        to such a scheme.
+   * @param array $options  An array of options. Supperted options:
+   *                        nohelp => true: Do not register -h and --help as help printout.
+   */
+  public function __construct($scheme, Array $options = [])
   {
     $this->options = $options;
 
@@ -19,7 +29,7 @@ class Convict {
     }
 
     $this->scheme = json_decode($scheme, true);
-    if (null == $this->scheme) {
+    if (null === $this->scheme) {
       throw new \Exception('Invalid config scheme');
     }
     $this->prepareArgsAndEnvs();
@@ -28,9 +38,42 @@ class Convict {
 
   }
 
-  public function addFormat(Validator\Validator $v)
+  public function get($key = '')
   {
-    $this->validators[] = $v;
+    $key = trim($key, '.');
+    if (empty($key)) {
+      return $this->config;
+    }
+    $path = explode('.', $key);
+    $current = $this->config;
+    foreach ($path as $p) {
+      if (!isset($current[$p])) {
+        return null;
+      }
+      $current = $current[$p];
+    }
+    return $current;
+  }
+
+  public function set($key, $value)
+  {
+    $key = trim($key, '.');
+    $path = explode('.', $key);
+    $current = &$this->config;
+    foreach ($path as $p) {
+      if (!isset($current[$p]) || !is_array($current[$p])) {
+        $current[$p] = [];
+      }
+      $current = &$current[$p];
+    }
+    $current = $value;
+
+  }
+
+  public function addFormat(\Convict\Validator\Validator $v)
+  {
+    $name = (new \ReflectionClass($v))->getShortName();
+    $this->validators[ucfirst(strtolower($name))] = $v;
   }
 
   public function validate()
@@ -87,7 +130,40 @@ class Convict {
     restore_exception_handler();
   }
 
-  public function writeConfig($filename)
+  public function loadFile($files)
+  {
+    foreach ((array) $files as $file) {
+      $json[] = file_get_contents($file);
+    }
+    $this->loadConfigJson($json);
+  }
+
+  public function loadConfigJson($jsons)
+  {
+    foreach ((array) $jsons as $json) {
+      $json = preg_replace('|^[ \t]*//(.*)\n|m', '', $json);
+      $json = preg_replace('|/\*(.*)\*/|s', '', $json);
+      $data = json_decode(trim($json), true);
+
+      if (null == $data) {
+        throw new \Exception('Invalid config');
+      }
+      $set = function ($data, $parent = '') use (&$set) {
+        foreach ($data as $id => $d) {
+          $key = trim(sprintf('%s.%s', $parent, $id), '.');
+          if (is_array($d)) {
+            $set($d, $key);
+            continue;
+          }
+          $this->fromFile[$key] = $d;
+        }
+      };
+      $set($data);
+    }
+    $this->loadFromScheme($this->scheme);
+  }
+
+  public function writeFile($filename)
   {
     $write = function ($conf, $scheme, $indent = '  ') use (&$write) {
       $ret = "{\n";
@@ -125,6 +201,42 @@ class Convict {
        $conf .= wordwrap("/*\n* " . $this->scheme['about'], 75, "\n* ") . "\n*/\n\n";
     }
     file_put_contents($filename, $conf . $write($this->config, $this->scheme));
+  }
+
+  protected function loadFromScheme($scheme, $parent = '')
+  {
+    $set = function ($scheme, $schemeKey, $fromArray, $configKey) {
+      if (isset($scheme[$schemeKey]) && isset($fromArray[trim($scheme[$schemeKey], ':')])) {
+        $this->set($configKey, $fromArray[trim($scheme[$schemeKey], ':')]);
+        return true;
+      }
+      return false;
+    };
+    foreach ($scheme as $id => $data) {
+      $c = trim(sprintf('%s.%s', $parent, $id), '.');
+      if (isset($data['doc'])) {
+        if ($set($data, 'arg', $this->args, $c)) {
+          continue;
+        }
+        if ($set($data, 'shortarg', $this->args, $c)) {
+          continue;
+        }
+        if ($set($data, 'env', $this->env, $c)) {
+          continue;
+        }
+        if (isset($this->fromFile[$c])) {
+          $this->set($c, $this->fromFile[$c]);
+          continue;
+        }
+        if ( isset($data['default'])) {
+          $this->set($c, $data['default']);
+        }
+      } else {
+        if (is_array($data)) {
+          $this->loadFromScheme($data, $c);
+        }
+      }
+    }
   }
 
   private function printHelp()
@@ -260,103 +372,5 @@ class Convict {
       $longargs[] = 'help';
     }
     $this->args = getopt(implode($shortargs), $longargs);
-  }
-
-  public function loadFile($file)
-  {
-    $json = file_get_contents($file);
-    $this->loadConfigJson($json);
-  }
-
-  public function loadConfigJson($json)
-  {
-    $json = preg_replace('|^[ \t]*//(.*)\n|m', '', $json);
-    $json = preg_replace('|/\*(.*)\*/|s', '', $json);
-    $data = json_decode(trim($json), true);
-
-    if (null == $data) {
-      throw new \Exception('Invalid config');
-    }
-    $set = function ($data, $parent = '') use (&$set) {
-      foreach ($data as $id => $d) {
-        $key = trim(sprintf('%s.%s', $parent, $id), '.');
-        if (is_array($d)) {
-          $set($d, $key);
-          continue;
-        }
-        $this->fromFile[$key] = $d;
-      }
-    };
-    $set($data);
-    $this->loadFromScheme($this->scheme);
-  }
-
-  public function loadFromScheme($scheme, $parent = '')
-  {
-
-    $set = function ($scheme, $schemeKey, $fromArray, $configKey) {
-      if (isset($scheme[$schemeKey]) && isset($fromArray[trim($scheme[$schemeKey], ':')])) {
-        $this->set($configKey, $fromArray[trim($scheme[$schemeKey], ':')]);
-        return true;
-      }
-      return false;
-    };
-    foreach ($scheme as $id => $data) {
-      $c = trim(sprintf('%s.%s', $parent, $id), '.');
-      if (isset($data['doc'])) {
-        if ($set($data, 'arg', $this->args, $c)) {
-          continue;
-        }
-        if ($set($data, 'shortarg', $this->args, $c)) {
-          continue;
-        }
-        if ($set($data, 'env', $this->env, $c)) {
-          continue;
-        }
-        if (isset($this->fromFile[$c])) {
-          $this->set($c, $this->fromFile[$c]);
-          continue;
-        }
-        if ( isset($data['default'])) {
-          $this->set($c, $data['default']);
-        }
-      } else {
-        if (is_array($data)) {
-          $this->loadFromScheme($data, $c);
-        }
-      }
-    }
-  }
-
-  public function set($key, $value)
-  {
-    $key = trim($key, '.');
-    $path = explode('.', $key);
-    $current = &$this->config;
-    foreach ($path as $p) {
-      if (!isset($current[$p]) || !is_array($current[$p])) {
-        $current[$p] = [];
-      }
-      $current = &$current[$p];
-    }
-    $current = $value;
-
-  }
-
-  public function get($key = '')
-  {
-    $key = trim($key, '.');
-    if (empty($key)) {
-      return $this->config;
-    }
-    $path = explode('.', $key);
-    $current = $this->config;
-    foreach ($path as $p) {
-      if (!isset($current[$p])) {
-        return null;
-      }
-      $current = $current[$p];
-    }
-    return $current;
   }
 }
