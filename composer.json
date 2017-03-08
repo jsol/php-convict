@@ -2,6 +2,12 @@
   "name": "jenson/convict",
   "description": "Configuration management. PHP implementation of node-convict",
   "type": "library",
+  "keywords": [
+    "configuration",
+    "config",
+    "command line arguments",
+    "environment variables"
+  ],
   "authors": [
     {
       "name": "Jens Olsson",
@@ -9,7 +15,6 @@
     }
   ],
   "require": {
-    "phpdocumentor/reflection-docblock": "^3.1"
   },
   "autoload": {
     "psr-4": {
